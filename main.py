@@ -1,9 +1,9 @@
 import pandas as pd
-class proceso_ETL():    
-    import glob
-
-    def cargar_ratings(self):
-        listacsv = self.glob.glob('**/[1-8].csv', recursive=True)
+import glob
+class proceso_ETL:    
+    
+    def cargar_ratings():
+        listacsv = glob.glob('**/[1-8].csv', recursive=True)
         df = pd.DataFrame(pd.read_csv(listacsv[0]))
 
         for i in range(1,len(listacsv)):
@@ -13,11 +13,11 @@ class proceso_ETL():
 
         return df
 
-    def cargar_peliculas(self):
+    def cargar_peliculas():
         ruta_carpeta = 'MLOpsReviews'
-        lista_csv = self.glob.glob(ruta_carpeta + "/*.csv")
+        lista_csv = glob.glob(ruta_carpeta + "/*.csv")
 
-        ids = ['a','d','h','n']
+        ids = 'adhn'
 
         peliculas = pd.DataFrame({})
 
@@ -62,11 +62,24 @@ def index():
     return msg + msg2    
 
 @app.get('/duracion')
-def get_max_duration(year: int,platform,duration_type):
+def get_max_duration(year: int,platform: str,duration_type: str):
     '''Función para obtener pelicula con máxima duración con filtros de
     año, plataforma y tipo de audiovisual(Pelicula o Serie) '''
+    platform = platform[0]
+    if platform not in 'adhn':
+        return 'El campo platform solo admite los valores amazon,disney,hulu o netflix'
     
-    return 'f'
+    if duration_type == 'min':
+        df = peliculas[(peliculas.id.str.startswith(platform)) & (peliculas.type== 'movie') & (peliculas.release_year == year)] 
+        
+    elif duration_type == 'season':
+        df = peliculas[(peliculas.id.str.startswith(platform)) & (peliculas.type== 'tv show') & (peliculas.release_year == year)]
+    else: 
+        return 'El campo duration_type solo admite los valores "min" o "season"'
+
+    idx = df.duration_int.idxmax()        
+    return df.title[idx] 
+    
 
 @app.get('/peliculas_por_puntaje')
 def get_score_count(platform,scored: float,year: int):
@@ -78,9 +91,21 @@ def get_score_count(platform,scored: float,year: int):
 def get_platform_count(platform: str):
     '''Función para obtener el número de peliculas disponibles de una plataforma
     '''
-    return 'f'
+    platform = platform[0]
+    if platform not in 'adhn':
+        return 'El campo platform solo admite los valores amazon,disney,hulu o netflix'
+    
+    return peliculas[peliculas.id.str.startswith(platform)].id.count()
 
 @app.get('/actor')
 def get_actor(platform,year: int):
     ''' Función para obtener el actor que mas interpretaciones ha realizado en una plataforma y año especifico'''
-    return 'f'
+    platform = platform[0]
+    if platform not in 'adhn':
+        return 'El campo platform solo admite los valores amazon,disney,hulu o netflix'
+    
+    actores = plataformas[(plataformas.id.str.startswith(platform)) & (plataformas.release_year == year)].cast
+    actores = actores.str.split(", ").explode()
+    actores = actores.value_counts().drop(labels='nan')
+
+    return actores.index[0]
